@@ -1,6 +1,14 @@
 import { eachDayOfInterval, endOfMonth, format, startOfMonth } from "date-fns"
 import React, { useEffect, useState } from "react"
-import { applyColorToDate, ColorTextureCode, DateCellData, getDateKey, UI_COLORS } from "../../utils/colors"
+import {
+  applyColorToDate,
+  ColorTextureCode,
+  DateCellData,
+  getDateKey,
+  getMergedDayData,
+  Layer,
+  UI_COLORS,
+} from "../../utils/colors"
 import Day from "../Day"
 
 interface ColumnViewProps {
@@ -8,9 +16,20 @@ interface ColumnViewProps {
   dateCells: Map<string, DateCellData>
   setDateCells: (dateCells: Map<string, DateCellData>) => void
   selectedColorTexture: ColorTextureCode
+  layers: Layer[]
+  allLayerData: Record<string, Map<string, DateCellData>>
+  activeLayerId: string
 }
 
-const ColumnView: React.FC<ColumnViewProps> = ({ selectedYear, dateCells, setDateCells, selectedColorTexture }) => {
+const ColumnView: React.FC<ColumnViewProps> = ({
+  selectedYear,
+  dateCells,
+  setDateCells,
+  selectedColorTexture,
+  layers,
+  allLayerData,
+  activeLayerId,
+}) => {
   const [isDragging, setIsDragging] = useState(false)
 
   const handleMouseDown = (date: Date) => {
@@ -143,6 +162,7 @@ const ColumnView: React.FC<ColumnViewProps> = ({ selectedYear, dateCells, setDat
                 }
 
                 const dateKey = getDateKey(day)
+                const merged = getMergedDayData(dateKey, layers, allLayerData, activeLayerId)
                 const dayData = dateCells.get(dateKey) || {}
                 const isColored = !!(dayData.color || dayData.texture)
                 const dayColorTexture = dayData.color || dayData.texture
@@ -163,6 +183,7 @@ const ColumnView: React.FC<ColumnViewProps> = ({ selectedYear, dateCells, setDat
                       date={day}
                       isColored={isColored}
                       colorTextureCode={dayColorTexture}
+                      layerColors={merged.layerColors}
                       onMouseDown={() => handleMouseDown(day)}
                       onMouseEnter={() => handleMouseEnter(day)}
                       onCustomTextChange={(text) => handleCustomTextChange(day, text)}

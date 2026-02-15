@@ -1,14 +1,15 @@
 import React, { useRef } from "react"
 import { useCalendar } from "../contexts/CalendarContext"
-import { UI_COLORS } from "../utils/colors"
+import { createDefaultLayer, DateCellData, UI_COLORS } from "../utils/colors"
 
 const SaveLoadData: React.FC = () => {
   const {
     selectedYear,
-    dateCells,
+    layers,
+    allLayerData,
+    activeLayerId,
     selectedColorTexture,
     selectedView,
-    setDateCells,
     setSelectedYear,
     setSelectedColorTexture,
     setSelectedView,
@@ -17,13 +18,20 @@ const SaveLoadData: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleSaveData = () => {
+    const serializedLayerData: Record<string, Record<string, DateCellData>> = {}
+    for (const [layerId, cells] of Object.entries(allLayerData)) {
+      serializedLayerData[layerId] = Object.fromEntries(cells)
+    }
+
     const dataToSave = {
       selectedYear,
-      dateCells: Object.fromEntries(dateCells),
+      layers,
+      layerData: serializedLayerData,
+      activeLayerId,
       selectedColorTexture,
       selectedView,
       exportDate: new Date().toISOString(),
-      version: "2.0",
+      version: "3.0",
     }
 
     const blob = new Blob([JSON.stringify(dataToSave, null, 2)], {
@@ -59,19 +67,6 @@ const SaveLoadData: React.FC = () => {
           return
         }
 
-        if (loadedData.dateCells && typeof loadedData.dateCells === "object") {
-          const newDateCells = new Map(dateCells)
-
-          Object.entries(loadedData.dateCells).forEach(([dateKey, cellData]) => {
-            const existing = newDateCells.get(dateKey) || {}
-            newDateCells.set(dateKey, {
-              ...existing,
-              ...(cellData as any),
-            })
-          })
-          setDateCells(newDateCells)
-        }
-
         if (loadedData.selectedYear && typeof loadedData.selectedYear === "number") {
           setSelectedYear(loadedData.selectedYear)
         }
@@ -82,27 +77,38 @@ const SaveLoadData: React.FC = () => {
           setSelectedView(loadedData.selectedView)
         }
 
-        const mergedDateCells = loadedData.dateCells
-          ? (() => {
-              const newDateCells = new Map(dateCells)
-              Object.entries(loadedData.dateCells).forEach(([dateKey, cellData]) => {
-                const existing = newDateCells.get(dateKey) || {}
-                newDateCells.set(dateKey, {
-                  ...existing,
-                  ...(cellData as any),
-                })
-              })
-              return Object.fromEntries(newDateCells)
-            })()
-          : Object.fromEntries(dateCells)
+        // Determine format and build v3 storage
+        let finalLayers = layers
+        let finalLayerData: Record<string, Record<string, DateCellData>> = {}
+        let finalActiveLayerId = activeLayerId
 
-        const dataToSave = {
+        if (loadedData.version === "3.0" && loadedData.layers && loadedData.layerData) {
+          // v3 format
+          finalLayers = loadedData.layers
+          finalLayerData = loadedData.layerData
+          finalActiveLayerId = loadedData.activeLayerId || loadedData.layers[0]?.id
+        } else if (loadedData.dateCells && typeof loadedData.dateCells === "object") {
+          // v2 format — migrate into a default layer
+          const defaultLayer = createDefaultLayer()
+          finalLayers = [defaultLayer]
+          finalLayerData = { [defaultLayer.id]: loadedData.dateCells }
+          finalActiveLayerId = defaultLayer.id
+        }
+
+        // Save directly to localStorage as v3
+        const toSave = {
           selectedYear: loadedData.selectedYear || selectedYear,
-          dateCells: mergedDateCells,
+          layers: finalLayers,
+          layerData: finalLayerData,
+          activeLayerId: finalActiveLayerId,
           selectedColorTexture: loadedData.selectedColorTexture || selectedColorTexture,
           selectedView: loadedData.selectedView || selectedView,
+          version: "3.0",
         }
-        localStorage.setItem("calendar_data", JSON.stringify(dataToSave))
+        localStorage.setItem("calendar_data", JSON.stringify(toSave))
+
+        // Reload the page to pick up the new data
+        window.location.reload()
       } catch (error) {
         alert("Error loading data: Invalid JSON format")
         console.error("Error parsing loaded data:", error)
@@ -115,12 +121,8 @@ const SaveLoadData: React.FC = () => {
 
   const handleCleanAll = () => {
     if (window.confirm("Are you sure you want to delete all data? This action cannot be undone.")) {
-      setDateCells(new Map())
-      setSelectedYear(new Date().getFullYear())
-      setSelectedColorTexture("red")
-      setSelectedView("Linear")
-
       localStorage.removeItem("calendar_data")
+      window.location.reload()
     }
   }
 

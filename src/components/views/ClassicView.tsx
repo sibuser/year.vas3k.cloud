@@ -1,6 +1,14 @@
-import { eachDayOfInterval, endOfMonth, format, getDay, startOfMonth } from "date-fns"
+import { eachDayOfInterval, endOfMonth, format, getDay, getISOWeek, startOfMonth } from "date-fns"
 import React, { useEffect, useState } from "react"
-import { applyColorToDate, ColorTextureCode, DateCellData, getDateKey, UI_COLORS } from "../../utils/colors"
+import {
+  applyColorToDate,
+  ColorTextureCode,
+  DateCellData,
+  getDateKey,
+  getMergedDayData,
+  Layer,
+  UI_COLORS,
+} from "../../utils/colors"
 import Day from "../Day"
 
 interface ClassicViewProps {
@@ -8,9 +16,20 @@ interface ClassicViewProps {
   dateCells: Map<string, DateCellData>
   setDateCells: (dateCells: Map<string, DateCellData>) => void
   selectedColorTexture: ColorTextureCode
+  layers: Layer[]
+  allLayerData: Record<string, Map<string, DateCellData>>
+  activeLayerId: string
 }
 
-const ClassicView: React.FC<ClassicViewProps> = ({ selectedYear, dateCells, setDateCells, selectedColorTexture }) => {
+const ClassicView: React.FC<ClassicViewProps> = ({
+  selectedYear,
+  dateCells,
+  setDateCells,
+  selectedColorTexture,
+  layers,
+  allLayerData,
+  activeLayerId,
+}) => {
   const [isDragging, setIsDragging] = useState(false)
 
   const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -165,6 +184,22 @@ const ClassicView: React.FC<ClassicViewProps> = ({ selectedYear, dateCells, setD
               >
                 <thead>
                   <tr>
+                    <th
+                      style={{
+                        padding: "4px 2px",
+                        textAlign: "center",
+                        fontWeight: "bold",
+                        fontSize: "9px",
+                        borderBottom: `1px solid ${UI_COLORS.border.secondary}`,
+                        backgroundColor: UI_COLORS.background.tertiary,
+                        width: "24px",
+                        minWidth: "24px",
+                        maxWidth: "24px",
+                        color: UI_COLORS.text.secondary,
+                      }}
+                    >
+                      Wk
+                    </th>
                     {dayNames.map((dayName) => (
                       <th
                         key={dayName}
@@ -175,8 +210,6 @@ const ClassicView: React.FC<ClassicViewProps> = ({ selectedYear, dateCells, setD
                           fontSize: "11px",
                           borderBottom: `1px solid ${UI_COLORS.border.secondary}`,
                           backgroundColor: UI_COLORS.background.tertiary,
-                          width: "14.28%", // 100% / 7 days
-                          maxWidth: "14.28%",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
@@ -188,8 +221,28 @@ const ClassicView: React.FC<ClassicViewProps> = ({ selectedYear, dateCells, setD
                   </tr>
                 </thead>
                 <tbody>
-                  {weeks.map((week, weekIndex) => (
+                  {weeks.map((week, weekIndex) => {
+                    const firstDayOfWeek = week.find((d) => d !== null)
+                    const weekNumber = firstDayOfWeek ? getISOWeek(firstDayOfWeek) : null
+
+                    return (
                     <tr key={weekIndex}>
+                      <td
+                        style={{
+                          padding: "0 2px",
+                          textAlign: "center",
+                          verticalAlign: "middle",
+                          fontSize: "9px",
+                          color: UI_COLORS.text.secondary,
+                          width: "24px",
+                          minWidth: "24px",
+                          maxWidth: "24px",
+                          borderRight: `1px solid ${UI_COLORS.border.tertiary}`,
+                          backgroundColor: UI_COLORS.background.tertiary,
+                        }}
+                      >
+                        {weekNumber}
+                      </td>
                       {week.map((day, dayIndex) => {
                         if (!day) {
                           return (
@@ -210,6 +263,7 @@ const ClassicView: React.FC<ClassicViewProps> = ({ selectedYear, dateCells, setD
                         }
 
                         const dateKey = getDateKey(day)
+                        const merged = getMergedDayData(dateKey, layers, allLayerData, activeLayerId)
                         const dayData = dateCells.get(dateKey) || {}
                         const isColored = !!(dayData.color || dayData.texture)
                         const dayColorTexture = dayData.color || dayData.texture
@@ -233,6 +287,7 @@ const ClassicView: React.FC<ClassicViewProps> = ({ selectedYear, dateCells, setD
                               date={day}
                               isColored={isColored}
                               colorTextureCode={dayColorTexture}
+                              layerColors={merged.layerColors}
                               onMouseDown={() => handleMouseDown(day)}
                               onMouseEnter={() => handleMouseEnter(day)}
                               onCustomTextChange={(text) => handleCustomTextChange(day, text)}
@@ -243,7 +298,8 @@ const ClassicView: React.FC<ClassicViewProps> = ({ selectedYear, dateCells, setD
                         )
                       })}
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

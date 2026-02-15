@@ -1,6 +1,14 @@
-import { addDays, eachDayOfInterval, endOfYear, format, getDay, isSameMonth, startOfYear, subDays } from "date-fns"
+import { addDays, eachDayOfInterval, endOfYear, format, getDay, getISOWeek, isSameMonth, startOfYear, subDays } from "date-fns"
 import React, { useEffect, useState } from "react"
-import { applyColorToDate, ColorTextureCode, DateCellData, getDateKey, UI_COLORS } from "../../utils/colors"
+import {
+  applyColorToDate,
+  ColorTextureCode,
+  DateCellData,
+  getDateKey,
+  getMergedDayData,
+  Layer,
+  UI_COLORS,
+} from "../../utils/colors"
 import Day from "../Day"
 
 interface LinearViewProps {
@@ -8,9 +16,20 @@ interface LinearViewProps {
   dateCells: Map<string, DateCellData>
   setDateCells: (dateCells: Map<string, DateCellData>) => void
   selectedColorTexture: ColorTextureCode
+  layers: Layer[]
+  allLayerData: Record<string, Map<string, DateCellData>>
+  activeLayerId: string
 }
 
-const LinearView: React.FC<LinearViewProps> = ({ selectedYear, dateCells, setDateCells, selectedColorTexture }) => {
+const LinearView: React.FC<LinearViewProps> = ({
+  selectedYear,
+  dateCells,
+  setDateCells,
+  selectedColorTexture,
+  layers,
+  allLayerData,
+  activeLayerId,
+}) => {
   const [isDragging, setIsDragging] = useState(false)
 
   const year = selectedYear
@@ -261,6 +280,20 @@ const LinearView: React.FC<LinearViewProps> = ({ selectedYear, dateCells, setDat
             >
               &nbsp;
             </th>
+            <th
+              style={{
+                width: "36px",
+                padding: "4px",
+                fontWeight: "bold",
+                fontSize: "11px",
+                borderRight: `2px solid ${UI_COLORS.border.primary}`,
+                backgroundColor: UI_COLORS.background.secondary,
+                textAlign: "center",
+                color: UI_COLORS.text.secondary,
+              }}
+            >
+              Wk
+            </th>
             {dayNames.map((dayName) => (
               <th
                 key={dayName}
@@ -301,9 +334,28 @@ const LinearView: React.FC<LinearViewProps> = ({ selectedYear, dateCells, setDat
                   {monthName}
                 </td>
 
+                {/* Week number cell */}
+                <td
+                  style={{
+                    width: "36px",
+                    padding: "4px",
+                    fontSize: "12px",
+                    fontWeight: "normal",
+                    borderRight: `2px solid ${UI_COLORS.border.primary}`,
+                    backgroundColor: UI_COLORS.background.tertiary,
+                    textAlign: "center",
+                    verticalAlign: "middle",
+                    color: UI_COLORS.text.secondary,
+                    borderTop: monthName ? `2px solid ${UI_COLORS.border.primary}` : "none",
+                  }}
+                >
+                  {getISOWeek(week[0])}
+                </td>
+
                 {/* Day cells */}
                 {week.map((day, dayIndex) => {
                   const dateKey = getDateKey(day)
+                  const merged = getMergedDayData(dateKey, layers, allLayerData, activeLayerId)
                   const dateCellData = dateCells.get(dateKey) || {}
                   const isColored = !!(dateCellData.color || dateCellData.texture)
                   const dayColorTexture = dateCellData.color || dateCellData.texture
@@ -334,6 +386,7 @@ const LinearView: React.FC<LinearViewProps> = ({ selectedYear, dateCells, setDat
                           date={day}
                           isColored={isColored}
                           colorTextureCode={dayColorTexture}
+                          layerColors={merged.layerColors}
                           onMouseDown={() => handleMouseDown(day)}
                           onMouseEnter={() => handleMouseEnter(day)}
                           onCustomTextChange={(text) => handleCustomTextChange(day, text)}

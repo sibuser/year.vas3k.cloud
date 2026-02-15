@@ -15,6 +15,35 @@ export interface DateCellData {
   customText?: string
 }
 
+export interface Layer {
+  id: string
+  name: string
+  color: ColorCode
+  visible: boolean
+}
+
+export type LayerData = Record<string, Map<string, DateCellData>> // layerId -> dateKey -> cell
+
+let idCounter = 0
+export const generateLayerId = (): string => {
+  idCounter++
+  return `layer_${Date.now()}_${idCounter}`
+}
+
+export const createDefaultLayer = (): Layer => ({
+  id: generateLayerId(),
+  name: "Default",
+  color: "red",
+  visible: true,
+})
+
+export interface MergedDayData {
+  layerColors: ColorCode[]  // colors from visible layers that have data on this day
+  customText?: string       // from active layer
+  activeLayerColor?: ColorCode
+  activeLayerTexture?: TextureCode
+}
+
 export const COLORS: Record<ColorCode, string> = {
   red: "oklch(0.7003 0.2051 17.87)",
   orange: "oklch(0.847 0.2 60)",
@@ -140,4 +169,39 @@ export const applyColorToDate = (
   }
 
   setDateCells(newDateCells)
+}
+
+/**
+ * Merge visible layer data for a specific date into a single MergedDayData.
+ */
+export const getMergedDayData = (
+  dateKey: string,
+  layers: Layer[],
+  allLayerData: Record<string, Map<string, DateCellData>>,
+  activeLayerId: string
+): MergedDayData => {
+  const layerColors: ColorCode[] = []
+  let customText: string | undefined
+  let activeLayerColor: ColorCode | undefined
+  let activeLayerTexture: TextureCode | undefined
+
+  for (const layer of layers) {
+    if (!layer.visible) continue
+    const layerCells = allLayerData[layer.id]
+    if (!layerCells) continue
+    const cell = layerCells.get(dateKey)
+    if (!cell) continue
+
+    if (cell.color) {
+      layerColors.push(cell.color)
+    }
+
+    if (layer.id === activeLayerId) {
+      customText = cell.customText
+      activeLayerColor = cell.color
+      activeLayerTexture = cell.texture
+    }
+  }
+
+  return { layerColors, customText, activeLayerColor, activeLayerTexture }
 }

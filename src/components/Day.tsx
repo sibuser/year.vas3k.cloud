@@ -1,12 +1,15 @@
 import { isToday, isWeekend } from "date-fns"
 import React, { useState } from "react"
-import { COLORS, ColorTextureCode, TEXTURES, UI_COLORS, WEEKEND_COLOR } from "../utils/colors"
+import { ColorCode, COLORS, ColorTextureCode, TEXTURES, UI_COLORS, WEEKEND_COLOR } from "../utils/colors"
 import CustomText from "./CustomText"
 
 interface DayProps {
   date: Date
+  // Single-layer mode (backward compat for active layer painting)
   isColored?: boolean
   colorTextureCode?: ColorTextureCode
+  // Multi-layer stacking
+  layerColors?: ColorCode[]
   onClick?: () => void
   onMouseDown?: () => void
   onMouseEnter?: () => void
@@ -19,6 +22,7 @@ const Day: React.FC<DayProps> = ({
   date,
   isColored = false,
   colorTextureCode,
+  layerColors = [],
   onClick,
   onMouseDown,
   onMouseEnter,
@@ -30,7 +34,14 @@ const Day: React.FC<DayProps> = ({
   const [isHovered, setIsHovered] = useState(false)
   const [isCreatingCustomText, setIsCreatingCustomText] = useState(false)
 
+  const hasLayerColors = layerColors.length > 0
+
   const getBackgroundColor = (): string => {
+    // If we have stacked layer colors, the background is handled by strips
+    if (hasLayerColors) {
+      return "transparent"
+    }
+
     if (!isColored || !colorTextureCode || !(colorTextureCode in COLORS)) {
       if (isWeekend(date)) {
         return WEEKEND_COLOR
@@ -41,9 +52,7 @@ const Day: React.FC<DayProps> = ({
     const color = COLORS[colorTextureCode as keyof typeof COLORS]
     if (!color) return UI_COLORS.background.primary
 
-    // Apply hover effect for colors
     if (isHovered) {
-      // Parse OKLCH values and increase lightness slightly for hover
       const match = color.match(/oklch\(([^)]+)\)/)
       if (match) {
         const values = match[1].split(" ")
@@ -62,6 +71,9 @@ const Day: React.FC<DayProps> = ({
   }
 
   const getBaseBackgroundColor = (): string => {
+    if (hasLayerColors) {
+      return COLORS[layerColors[0]]
+    }
     if (!isColored || !colorTextureCode || !(colorTextureCode in COLORS)) {
       if (isWeekend(date)) {
         return WEEKEND_COLOR
@@ -74,6 +86,7 @@ const Day: React.FC<DayProps> = ({
   }
 
   const getTextureStyles = (): React.CSSProperties => {
+    if (hasLayerColors) return {}
     if (!isColored || !colorTextureCode || !(colorTextureCode in TEXTURES)) {
       return {}
     }
@@ -98,7 +111,6 @@ const Day: React.FC<DayProps> = ({
   const handleCustomTextChange = (text: string) => {
     if (onCustomTextChange) {
       onCustomTextChange(text)
-      // If text is empty and we're creating, stop creating mode
       if (text.trim().length === 0) {
         setIsCreatingCustomText(false)
       }
@@ -107,32 +119,30 @@ const Day: React.FC<DayProps> = ({
 
   const hasCustomText = customText.trim().length > 0 || isCreatingCustomText
 
+  // Determine the default background for the cell (weekend or normal)
+  const defaultBg = isWeekend(date) ? WEEKEND_COLOR : UI_COLORS.background.primary
+  const hoverBg = isWeekend(date) ? WEEKEND_COLOR : UI_COLORS.background.quaternary
+
   return (
     <div
       className="day"
-      data-colored={isColored ? "true" : "false"}
+      data-colored={isColored || hasLayerColors ? "true" : "false"}
       onClick={(e) => {
-        if (e.target !== e.currentTarget) {
-          return
-        }
+        if (e.target !== e.currentTarget) return
         if (onClick) onClick()
       }}
       onPointerDown={(e) => {
-        if (e.target !== e.currentTarget) {
-          return
-        }
+        if (e.target !== e.currentTarget) return
         if (onMouseDown) onMouseDown()
       }}
       onPointerEnter={(e) => {
-        if (e.target !== e.currentTarget) {
-          return
-        }
+        if (e.target !== e.currentTarget) return
         setIsHovered(true)
         if (onMouseEnter) onMouseEnter()
       }}
       onPointerLeave={() => setIsHovered(false)}
       style={{
-        padding: "4px",
+        padding: "0",
         textAlign: "center",
         width: "100%",
         height: "100%",
@@ -141,7 +151,11 @@ const Day: React.FC<DayProps> = ({
         justifyContent: "center",
         fontSize: "14px",
         fontWeight: "normal",
-        backgroundColor: getBackgroundColor(),
+        backgroundColor: hasLayerColors
+          ? hasCustomText
+            ? COLORS[layerColors[0]]
+            : isHovered ? hoverBg : defaultBg
+          : getBackgroundColor(),
         position: "relative",
         cursor: "cell",
         transition: "background-color 0.2s ease",
@@ -150,9 +164,32 @@ const Day: React.FC<DayProps> = ({
         border: isToday(date) ? `2px inset ${UI_COLORS.border.inset}` : "none",
         boxSizing: "border-box",
         touchAction: "auto",
-        ...getTextureStyles(),
+        ...(hasLayerColors ? {} : getTextureStyles()),
       }}
     >
+      {/* Stacked layer color strips */}
+      {hasLayerColors && !hasCustomText && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            flexDirection: "column",
+            pointerEvents: "none",
+          }}
+        >
+          {layerColors.map((color, i) => (
+            <div
+              key={i}
+              style={{
+                flex: 1,
+                backgroundColor: COLORS[color],
+              }}
+            />
+          ))}
+        </div>
+      )}
+
       {hasCustomText ? (
         <CustomText
           text={customText}
@@ -173,6 +210,8 @@ const Day: React.FC<DayProps> = ({
             pointerEvents: "auto",
             fontSize: "inherit",
             lineHeight: "1",
+            position: "relative",
+            zIndex: 1,
           }}
           onMouseEnter={(e) => {
             if (onCustomTextChange) {
