@@ -55,6 +55,12 @@ export const COLORS: Record<ColorCode, string> = {
   pink: "oklch(0.847 0.2 330)",
 }
 
+export type CustomColors = Partial<Record<ColorCode, string>>
+
+export const resolveColor = (code: ColorCode, customColors?: CustomColors): string => {
+  return customColors?.[code] || COLORS[code]
+}
+
 export const WEEKEND_COLOR = "oklch(0.95 0.015 240)"
 
 export const UI_COLORS = {
@@ -181,7 +187,7 @@ export const getMergedDayData = (
   activeLayerId: string
 ): MergedDayData => {
   const layerColors: ColorCode[] = []
-  let customText: string | undefined
+  const textParts: string[] = []
   let activeLayerColor: ColorCode | undefined
   let activeLayerTexture: TextureCode | undefined
 
@@ -196,12 +202,17 @@ export const getMergedDayData = (
       layerColors.push(cell.color)
     }
 
+    if (cell.customText) {
+      textParts.push(cell.customText)
+    }
+
     if (layer.id === activeLayerId) {
-      customText = cell.customText
       activeLayerColor = cell.color
       activeLayerTexture = cell.texture
     }
   }
+
+  const customText = textParts.length > 0 ? textParts.join(" ") : undefined
 
   return { layerColors, customText, activeLayerColor, activeLayerTexture }
 }

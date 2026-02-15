@@ -1,6 +1,6 @@
 import { isToday, isWeekend } from "date-fns"
 import React, { useState } from "react"
-import { ColorCode, COLORS, ColorTextureCode, TEXTURES, UI_COLORS, WEEKEND_COLOR } from "../utils/colors"
+import { ColorCode, COLORS, ColorTextureCode, CustomColors, resolveColor, TEXTURES, UI_COLORS, WEEKEND_COLOR } from "../utils/colors"
 import CustomText from "./CustomText"
 
 interface DayProps {
@@ -16,6 +16,7 @@ interface DayProps {
   customText?: string
   onCustomTextChange?: (text: string) => void
   customTextOverflow?: "overflow-x" | "overflow-y" | "no-overflow"
+  customColors?: CustomColors
 }
 
 const Day: React.FC<DayProps> = ({
@@ -29,6 +30,7 @@ const Day: React.FC<DayProps> = ({
   customText = "",
   onCustomTextChange,
   customTextOverflow = "overflow-x",
+  customColors,
 }) => {
   const dayNumber = date.getDate()
   const [isHovered, setIsHovered] = useState(false)
@@ -49,7 +51,7 @@ const Day: React.FC<DayProps> = ({
       return isHovered ? UI_COLORS.background.quaternary : UI_COLORS.background.primary
     }
 
-    const color = COLORS[colorTextureCode as keyof typeof COLORS]
+    const color = resolveColor(colorTextureCode as ColorCode, customColors)
     if (!color) return UI_COLORS.background.primary
 
     if (isHovered) {
@@ -72,7 +74,7 @@ const Day: React.FC<DayProps> = ({
 
   const getBaseBackgroundColor = (): string => {
     if (hasLayerColors) {
-      return COLORS[layerColors[0]]
+      return resolveColor(layerColors[0], customColors)
     }
     if (!isColored || !colorTextureCode || !(colorTextureCode in COLORS)) {
       if (isWeekend(date)) {
@@ -81,7 +83,7 @@ const Day: React.FC<DayProps> = ({
       return UI_COLORS.background.primary
     }
 
-    const color = COLORS[colorTextureCode as keyof typeof COLORS]
+    const color = resolveColor(colorTextureCode as ColorCode, customColors)
     return color || UI_COLORS.background.primary
   }
 
@@ -153,7 +155,7 @@ const Day: React.FC<DayProps> = ({
         fontWeight: "normal",
         backgroundColor: hasLayerColors
           ? hasCustomText
-            ? COLORS[layerColors[0]]
+            ? resolveColor(layerColors[0], customColors)
             : isHovered ? hoverBg : defaultBg
           : getBackgroundColor(),
         position: "relative",
@@ -183,7 +185,7 @@ const Day: React.FC<DayProps> = ({
               key={i}
               style={{
                 flex: 1,
-                backgroundColor: COLORS[color],
+                backgroundColor: resolveColor(color, customColors),
               }}
             />
           ))}

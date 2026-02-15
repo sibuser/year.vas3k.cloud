@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react"
-import { ColorCode, ColorTextureCode, createDefaultLayer, DateCellData, generateLayerId, Layer } from "../utils/colors"
+import { ColorCode, ColorTextureCode, createDefaultLayer, CustomColors, DateCellData, generateLayerId, Layer } from "../utils/colors"
 
 export type CalendarView = "Linear" | "Classic" | "Column"
 
@@ -24,6 +24,9 @@ interface CalendarContextType {
   setSelectedColorTexture: (colorTexture: ColorTextureCode) => void
   selectedView: CalendarView
   setSelectedView: (view: CalendarView) => void
+  // Custom colors
+  customColors: CustomColors
+  setCustomColor: (code: ColorCode, cssColor: string) => void
 }
 
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined)
@@ -51,6 +54,7 @@ interface StoredDataV3 {
   activeLayerId: string
   selectedColorTexture: ColorTextureCode
   selectedView: CalendarView
+  customColors?: CustomColors
   version: "3.0"
 }
 
@@ -69,6 +73,7 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({ children }) 
   const [allLayerData, setAllLayerDataState] = useState<Record<string, Map<string, DateCellData>>>({})
   const [selectedColorTexture, setSelectedColorTextureState] = useState<ColorTextureCode>("red")
   const [selectedView, setSelectedViewState] = useState<CalendarView>("Linear")
+  const [customColors, setCustomColorsState] = useState<CustomColors>({})
   const [initialized, setInitialized] = useState(false)
 
   // Load from localStorage on mount
@@ -98,6 +103,9 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({ children }) 
           // Load v3 data
           setLayersState(parsedData.layers)
           setActiveLayerIdState(parsedData.activeLayerId)
+          if (parsedData.customColors) {
+            setCustomColorsState(parsedData.customColors)
+          }
           const loadedData: Record<string, Map<string, DateCellData>> = {}
           for (const [layerId, cells] of Object.entries(parsedData.layerData)) {
             loadedData[layerId] = new Map(Object.entries(cells))
@@ -137,7 +145,8 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({ children }) 
     data: Record<string, Map<string, DateCellData>>,
     activeId: string,
     colorTexture: ColorTextureCode,
-    view: CalendarView
+    view: CalendarView,
+    colors: CustomColors
   ) => {
     try {
       const serializedLayerData: Record<string, Record<string, DateCellData>> = {}
@@ -151,6 +160,7 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({ children }) 
         activeLayerId: activeId,
         selectedColorTexture: colorTexture,
         selectedView: view,
+        customColors: Object.keys(colors).length > 0 ? colors : undefined,
         version: "3.0",
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave))
@@ -166,6 +176,7 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({ children }) 
     activeId?: string
     colorTexture?: ColorTextureCode
     view?: CalendarView
+    colors?: CustomColors
   } = {}) => {
     saveToLocalStorage(
       overrides.year ?? selectedYear,
@@ -173,7 +184,8 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({ children }) 
       overrides.data ?? allLayerData,
       overrides.activeId ?? activeLayerId,
       overrides.colorTexture ?? selectedColorTexture,
-      overrides.view ?? selectedView
+      overrides.view ?? selectedView,
+      overrides.colors ?? customColors
     )
   }
 
@@ -262,6 +274,12 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({ children }) 
     save({ lyrs: newLayers })
   }
 
+  const setCustomColor = (code: ColorCode, cssColor: string) => {
+    const newColors = { ...customColors, [code]: cssColor }
+    setCustomColorsState(newColors)
+    save({ colors: newColors })
+  }
+
   const value: CalendarContextType = {
     selectedYear,
     setSelectedYear,
@@ -279,6 +297,8 @@ export const CalendarProvider: React.FC<CalendarProviderProps> = ({ children }) 
     setSelectedColorTexture,
     selectedView,
     setSelectedView,
+    customColors,
+    setCustomColor,
   }
 
   if (!initialized) return null

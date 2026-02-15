@@ -10,6 +10,7 @@ const SaveLoadData: React.FC = () => {
     activeLayerId,
     selectedColorTexture,
     selectedView,
+    customColors,
     setSelectedYear,
     setSelectedColorTexture,
     setSelectedView,
@@ -30,6 +31,7 @@ const SaveLoadData: React.FC = () => {
       activeLayerId,
       selectedColorTexture,
       selectedView,
+      customColors: Object.keys(customColors).length > 0 ? customColors : undefined,
       exportDate: new Date().toISOString(),
       version: "3.0",
     }
@@ -103,6 +105,7 @@ const SaveLoadData: React.FC = () => {
           activeLayerId: finalActiveLayerId,
           selectedColorTexture: loadedData.selectedColorTexture || selectedColorTexture,
           selectedView: loadedData.selectedView || selectedView,
+          customColors: loadedData.customColors || undefined,
           version: "3.0",
         }
         localStorage.setItem("calendar_data", JSON.stringify(toSave))

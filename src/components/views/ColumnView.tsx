@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react"
 import {
   applyColorToDate,
   ColorTextureCode,
+  CustomColors,
   DateCellData,
   getDateKey,
   getMergedDayData,
@@ -19,6 +20,7 @@ interface ColumnViewProps {
   layers: Layer[]
   allLayerData: Record<string, Map<string, DateCellData>>
   activeLayerId: string
+  customColors?: CustomColors
 }
 
 const ColumnView: React.FC<ColumnViewProps> = ({
@@ -29,6 +31,7 @@ const ColumnView: React.FC<ColumnViewProps> = ({
   layers,
   allLayerData,
   activeLayerId,
+  customColors,
 }) => {
   const [isDragging, setIsDragging] = useState(false)
 
@@ -166,7 +169,7 @@ const ColumnView: React.FC<ColumnViewProps> = ({
                 const dayData = dateCells.get(dateKey) || {}
                 const isColored = !!(dayData.color || dayData.texture)
                 const dayColorTexture = dayData.color || dayData.texture
-                const customText = dayData.customText || ""
+                const customText = merged.customText || dayData.customText || ""
 
                 return (
                   <td
@@ -189,6 +192,7 @@ const ColumnView: React.FC<ColumnViewProps> = ({
                       onCustomTextChange={(text) => handleCustomTextChange(day, text)}
                       customText={customText}
                       customTextOverflow="overflow-y"
+                      customColors={customColors}
                     />
                   </td>
                 )

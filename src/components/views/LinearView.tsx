@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react"
 import {
   applyColorToDate,
   ColorTextureCode,
+  CustomColors,
   DateCellData,
   getDateKey,
   getMergedDayData,
@@ -19,6 +20,7 @@ interface LinearViewProps {
   layers: Layer[]
   allLayerData: Record<string, Map<string, DateCellData>>
   activeLayerId: string
+  customColors?: CustomColors
 }
 
 const LinearView: React.FC<LinearViewProps> = ({
@@ -29,6 +31,7 @@ const LinearView: React.FC<LinearViewProps> = ({
   layers,
   allLayerData,
   activeLayerId,
+  customColors,
 }) => {
   const [isDragging, setIsDragging] = useState(false)
 
@@ -359,7 +362,7 @@ const LinearView: React.FC<LinearViewProps> = ({
                   const dateCellData = dateCells.get(dateKey) || {}
                   const isColored = !!(dateCellData.color || dateCellData.texture)
                   const dayColorTexture = dateCellData.color || dateCellData.texture
-                  const customText = dateCellData.customText || ""
+                  const customText = merged.customText || dateCellData.customText || ""
 
                   return (
                     <td
@@ -392,6 +395,7 @@ const LinearView: React.FC<LinearViewProps> = ({
                           onCustomTextChange={(text) => handleCustomTextChange(day, text)}
                           customText={customText}
                           customTextOverflow="overflow-x"
+                          customColors={customColors}
                         />
                       </div>
                     </td>

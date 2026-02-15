@@ -1,6 +1,6 @@
 import React from "react"
 import { useCalendar } from "../contexts/CalendarContext"
-import { COLORS, UI_COLORS } from "../utils/colors"
+import { resolveColor, UI_COLORS } from "../utils/colors"
 import CalendarTitle from "./CalendarTitle"
 import ColorPicker from "./ColorPicker"
 import LayerPanel from "./LayerPanel"
@@ -11,7 +11,7 @@ import LinearView from "./views/LinearView"
 import ViewSelector from "./ViewSelector"
 
 const LayerLegend: React.FC = () => {
-  const { layers } = useCalendar()
+  const { layers, customColors } = useCalendar()
 
   if (layers.length <= 1) return null
 
@@ -34,7 +34,7 @@ const LayerLegend: React.FC = () => {
             width: "14px",
             height: "14px",
             borderRadius: "50%",
-            backgroundColor: COLORS[layer.color],
+            backgroundColor: resolveColor(layer.color, customColors),
             border: `1px solid ${UI_COLORS.border.secondary}`,
           }} />
           <span>{layer.name}</span>
@@ -55,6 +55,7 @@ const Calendar: React.FC = () => {
     layers,
     allLayerData,
     activeLayerId,
+    customColors,
   } = useCalendar()
 
   return (
@@ -78,6 +79,7 @@ const Calendar: React.FC = () => {
           layers={layers}
           allLayerData={allLayerData}
           activeLayerId={activeLayerId}
+          customColors={customColors}
         />
       ) : selectedView === "Classic" ? (
         <ClassicView
@@ -88,6 +90,7 @@ const Calendar: React.FC = () => {
           layers={layers}
           allLayerData={allLayerData}
           activeLayerId={activeLayerId}
+          customColors={customColors}
         />
       ) : (
         <ColumnView
@@ -98,6 +101,7 @@ const Calendar: React.FC = () => {
           layers={layers}
           allLayerData={allLayerData}
           activeLayerId={activeLayerId}
+          customColors={customColors}
         />
       )}
       </div>

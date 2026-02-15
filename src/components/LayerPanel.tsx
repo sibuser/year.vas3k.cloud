@@ -1,11 +1,11 @@
 import React, { useState } from "react"
 import { useCalendar } from "../contexts/CalendarContext"
-import { ColorCode, COLORS, UI_COLORS } from "../utils/colors"
+import { ColorCode, COLORS, resolveColor, UI_COLORS } from "../utils/colors"
 
 const ALL_COLORS: ColorCode[] = ["red", "orange", "green", "blue", "yellow", "purple", "teal", "pink"]
 
 const LayerPanel: React.FC = () => {
-  const { layers, activeLayerId, setActiveLayerId, addLayer, removeLayer, renameLayer, toggleLayerVisibility } =
+  const { layers, activeLayerId, setActiveLayerId, addLayer, removeLayer, renameLayer, toggleLayerVisibility, customColors } =
     useCalendar()
   const [isAdding, setIsAdding] = useState(false)
   const [newLayerName, setNewLayerName] = useState("")
@@ -75,7 +75,7 @@ const LayerPanel: React.FC = () => {
                 width: "12px",
                 height: "12px",
                 borderRadius: "50%",
-                backgroundColor: COLORS[layer.color],
+                backgroundColor: resolveColor(layer.color, customColors),
                 flexShrink: 0,
               }}
             />
@@ -179,7 +179,7 @@ const LayerPanel: React.FC = () => {
               width: "12px",
               height: "12px",
               borderRadius: "50%",
-              backgroundColor: COLORS[nextAvailableColor],
+              backgroundColor: resolveColor(nextAvailableColor, customColors),
               flexShrink: 0,
             }}
           />
